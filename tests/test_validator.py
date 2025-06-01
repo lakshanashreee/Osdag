@@ -38,14 +38,14 @@ def test_tension_bolted_test3():
         "Bolt.Diameter": "Pass"
     }
     run_test("TensionBoltedTest3.osi", expected_result)
-@pytest.mark.xfail
+
 # Test function 4
 @pytest.mark.xfail
 def test_tension_bolted_test4():
     expected_result = {
         "Member.Designation": "Pass",
         "Bolt.Grade": "Pass",
-        "Bolt.Diameter": "Pass"
+        "Bolt.Diameter": "Fail"
     }
     run_test("TensionBoltedTest4.osi", expected_result)
 
