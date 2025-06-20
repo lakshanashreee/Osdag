@@ -14,7 +14,6 @@ from importlib.resources import files
 #PATH_TO_DATABASE = "C:\Visual Studio Code\FOSSEE OSDAG\Osdag\src\osdag\data\ResourceFiles\Database\Intg_osdag.sqlite"
 
 try:
-    # Try package-based path first
     PATH_TO_DATABASE = files("osdag.data.ResourceFiles.Database").joinpath("Intg_osdag.sqlite")
     PATH_TO_DATABASE = str(PATH_TO_DATABASE)
     print(f"Common.py - Package-based database path: {PATH_TO_DATABASE}")
