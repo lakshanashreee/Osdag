@@ -3,42 +3,55 @@ from design_type.connection.fin_plate_connection import FinPlateConnection
 from utils.common.Common import connectdb, connectdb1, MaterialValidator, VALUES_CONN, VALUES_TYP, VALUES_GRD_CUSTOMIZED, VALUES_PLATETHK_CUSTOMIZED
 from utils.common.component import PATH_TO_DATABASE
 
+# function to get ultimate (fu) and yield (fy) strengths for a material grade
 def get_fy_fu(material_grade, thickness=None):
-    """Return fu and fy for a material grade, considering thickness for plates."""
+    """return fu and fy for a material grade, considering thickness for plates."""
+    # handle standard material grade e 250 (fe 410 w)a
     if material_grade == "E 250 (Fe 410 W)A":
+        # if no thickness provided, return default fu, fy
         if thickness is None:
             return 410, 250
         else:
+            # convert thickness to float for comparison
             thickness = float(thickness)
+            # return fu, fy based on thickness ranges
             if thickness <= 20:
                 return 410, 250, 250, 250
             elif thickness <= 40:
                 return 410, 250, 240, 240
             else:
                 return 410, 250, 240, 230
+    # handle custom material grades starting with "cus_"
     elif material_grade.startswith("Cus_"):
         validator = MaterialValidator(material_grade)
+        # check if custom material is valid
         if validator.is_valid_custom():
             parts = material_grade.split('_')
+            # extract fu and fy from custom grade name
             fu, fy = float(parts[-1]), float(parts[-2])
+            # return fu, fy based on thickness
             if thickness is None:
                 return fu, fy
             else:
                 return fu, fy, fy, fy
+    # default fu, fy if material grade is unknown
     return 410, 250
 
+# function to mimic gui input for fin plate connection
 def mimic_fin_plate_inputs(test_case_data):
-    """Mimic GUI input collection for fin plate connection, creating a design_dictionary."""
+    """mimic gui input collection for fin plate connection, creating a design_dictionary."""
+    # copy input data to avoid modifying original
     design_dictionary = test_case_data.copy()
     
-    # Connect to database for validation
+    # connect to database to fetch valid values
     conn = sqlite3.connect(PATH_TO_DATABASE)
     cursor = conn.cursor()
     
-    # Define input fields
+    # define input fields for fin plate connection
     input_fields = [
         {"key": "KEY_MODULE", "type": "TYPE_MODULE", "value": "Fin Plate Connection"},
         {"key": "KEY_CONN", "type": "TYPE_COMBOBOX", "values": VALUES_CONN},
+        # fetch beams or columns based on connection type
         {"key": "KEY_SUPTNGSEC", "type": "TYPE_COMBOBOX", 
          "values": connectdb("Beams") if test_case_data.get("KEY_CONN") == "Beam-Beam" else connectdb("Columns")},
         {"key": "KEY_SUPTNGSEC_MATERIAL", "type": "TYPE_COMBOBOX", "values": connectdb("Material")},
@@ -53,7 +66,7 @@ def mimic_fin_plate_inputs(test_case_data):
         {"key": "KEY_CONNECTOR_MATERIAL", "type": "TYPE_COMBOBOX", "values": connectdb("Material")},
     ]
     
-    # Design preference fields
+    # define design preference fields
     design_pref_fields = [
         {"key": "KEY_DP_BOLT_TYPE", "type": "TYPE_COMBOBOX", "values": ["Pretensioned", "Non pre-tensioned"]},
         {"key": "KEY_DP_BOLT_HOLE_TYPE", "type": "TYPE_COMBOBOX", "values": ["Standard", "Over-sized"]},
@@ -67,7 +80,7 @@ def mimic_fin_plate_inputs(test_case_data):
         {"key": "KEY_DP_DESIGN_METHOD", "type": "TYPE_COMBOBOX", "values": ["Limit State Design"]},
     ]
     
-    # Validate input fields
+    # validate each input field
     for field in input_fields:
         key = field["key"]
         input_type = field["type"]
@@ -75,14 +88,17 @@ def mimic_fin_plate_inputs(test_case_data):
         
         value = design_dictionary.get(key)
         
+        # check combobox values are valid
         if input_type == "TYPE_COMBOBOX":
             if value not in valid_values and value not in ["", None]:
                 raise ValueError(f"Invalid value '{value}' for {key}. Valid: {valid_values}")
+        # check customized combobox values
         elif input_type == "TYPE_COMBOBOX_CUSTOMIZED":
             if isinstance(valid_values, list) and valid_values and isinstance(valid_values[0], list):
                 valid_values = valid_values[0]
             if value not in valid_values and value not in ["", None]:
                 raise ValueError(f"Invalid value '{value}' for {key}. Valid: {valid_values}")
+        # validate textbox inputs as integers
         elif input_type == "TYPE_TEXTBOX" and field.get("validator") == "Int Validator":
             try:
                 if value not in ["", None]:
@@ -96,12 +112,14 @@ def mimic_fin_plate_inputs(test_case_data):
                 print(f"Error: Invalid {key}: '{value}'. Using default: 1")
                 design_dictionary[key] = "1"
         
+        # validate custom material grades
         if key.endswith("_MATERIAL") and value and value.startswith("Cus_"):
             validator = MaterialValidator(value)
             if not validator.is_valid_custom():
                 print(f"Warning: Invalid custom material '{value}' for {key}. Using default: E 250 (Fe 410 W)A")
                 design_dictionary[key] = "E 250 (Fe 410 W)A"
         
+        # convert specific keys to float or string
         if key == "KEY_GRD":
             design_dictionary[key] = float(value) if value else 8.8
         elif key == "KEY_D":
@@ -109,7 +127,7 @@ def mimic_fin_plate_inputs(test_case_data):
         else:
             design_dictionary[key] = str(value) if value is not None else ""
     
-    # Validate design preference fields
+    # validate design preference fields
     for field in design_pref_fields:
         key = field["key"]
         input_type = field["type"]
@@ -118,10 +136,12 @@ def mimic_fin_plate_inputs(test_case_data):
         
         value = design_dictionary.get(key, default_value)
         
+        # check design preference combobox values
         if input_type == "TYPE_COMBOBOX":
             if value not in valid_values:
                 print(f"Warning: Invalid value '{value}' for {key}. Using default: {default_value}")
                 design_dictionary[key] = default_value
+        # validate textbox inputs as floats
         elif input_type == "TYPE_TEXTBOX":
             try:
                 float(value)
@@ -129,7 +149,7 @@ def mimic_fin_plate_inputs(test_case_data):
                 print(f"Warning: Invalid value '{value}' for {key}. Using default: {default_value}")
                 design_dictionary[key] = default_value
     
-    # Add compatibility keys
+    # add compatibility keys for legacy support
     compatibility_keys = {
         "Connectivity *": "KEY_CONN",
         "Member.Supporting_Section.Designation" : "KEY_SUPTNGSEC",
@@ -162,16 +182,18 @@ def mimic_fin_plate_inputs(test_case_data):
         "Weld.Fu": "KEY_DP_WELD_MATERIAL_G_O",
     }
     
+    # map compatibility keys to design dictionary
     for dest_key, src_key in compatibility_keys.items():
         design_dictionary[dest_key] = design_dictionary.get(src_key, "")
     
-    # Calculate material properties
+    # calculate material properties for supporting, supported, and connector
     material_keys = [
         ("KEY_SUPTNGSEC_FU", "KEY_SUPTNGSEC_FY", "KEY_SUPTNGSEC_MATERIAL", None),
         ("KEY_SUPTDSEC_FU", "KEY_SUPTDSEC_FY", "KEY_SUPTDSEC_MATERIAL", None),
         ("KEY_CONNECTOR_FU", "KEY_CONNECTOR_FY_20", "KEY_CONNECTOR_MATERIAL", design_dictionary.get('KEY_PLATETHK', 10)),
     ]
     
+    # assign fu and fy based on material and thickness
     for fu_key, fy_key, mat_key, thickness in material_keys:
         material = design_dictionary.get(mat_key, "E 250 (Fe 410 W)A")
         if thickness is None:
@@ -185,13 +207,16 @@ def mimic_fin_plate_inputs(test_case_data):
             design_dictionary['KEY_CONNECTOR_FY_20_40'] = str(fy_20_40)
             design_dictionary['KEY_CONNECTOR_FY_40'] = str(fy_40)
     
+    # close database connection
     conn.close()
     return design_dictionary
 
+# function to test fin plate input mimicry with four test cases
 def test_mimic_fin_plate_inputs():
-    """Test the mimicry function with four OSI file test cases."""
+    """test the mimicry function with four osi file test cases."""
+    # define four test cases based on osi files
     test_cases = [
-        # FinPlateTest1.osi
+        # finplatetest1.osi
         {
             "KEY_MODULE": "Fin Plate Connection",
             "KEY_CONN": "Column Flange-Beam Web",
@@ -216,7 +241,7 @@ def test_mimic_fin_plate_inputs():
             "KEY_DP_DETAILING_CORROSIVE_INFLUENCES": "No",
             "KEY_DP_DESIGN_METHOD": "Limit State Design"
         },
-        # FinPlateTest2.osi
+        # finplatetest2.osi
         {
             "KEY_MODULE": "Fin Plate Connection",
             "KEY_CONN": "Column Web-Beam Web",
@@ -241,7 +266,7 @@ def test_mimic_fin_plate_inputs():
             "KEY_DP_DETAILING_CORROSIVE_INFLUENCES": "No",
             "KEY_DP_DESIGN_METHOD": "Limit State Design"
         },
-        # FinPlateTest3.osi
+        # finplatetest3.osi
         {
             "KEY_MODULE": "Fin Plate Connection",
             "KEY_CONN": "Beam-Beam",
@@ -266,7 +291,7 @@ def test_mimic_fin_plate_inputs():
             "KEY_DP_DETAILING_CORROSIVE_INFLUENCES": "No",
             "KEY_DP_DESIGN_METHOD": "Limit State Design"
         },
-        # FinPlateTest4.osi
+        # finplatetest4.osi
         {
             "KEY_MODULE": "Fin Plate Connection",
             "KEY_CONN": "Beam-Beam",
@@ -293,6 +318,7 @@ def test_mimic_fin_plate_inputs():
         }
     ]
     
+    # run each test case and validate
     for i, test_case in enumerate(test_cases, 1):
         print(f"\nRunning Test Case {i} (FinPlateTest{i}.osi)")
         try:
@@ -300,6 +326,7 @@ def test_mimic_fin_plate_inputs():
             print("Design Dictionary:")
             for key, value in sorted(design_dict.items()):
                 print(f"  {key}: {value}")
+            # create fin plate connection object and set inputs
             fin_plate = FinPlateConnection()
             fin_plate.set_input_values(design_dict)
             print(f"Test Case {i}: Validation Successful")
@@ -307,5 +334,6 @@ def test_mimic_fin_plate_inputs():
             print(f"Test Case {i}: Validation Failed - {str(e)}")
             raise
 
+# run tests if script is executed directly
 if __name__ == "__main__":
     test_mimic_fin_plate_inputs()
