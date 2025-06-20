@@ -12,17 +12,17 @@ Reference:
 
 """
 
-from ...design_report.reportGenerator_latex import CreateLatex
-from ...utils.common.Section_Properties_Calculator import *
-from ...utils.common.component import *
+from design_report.reportGenerator_latex import CreateLatex
+from utils.common.Section_Properties_Calculator import *
+from utils.common.component import *
 # from ...cad.common_logic import CommonDesignLogic
-from ...utils.common.material import *
-from ...Report_functions import *
-from ...utils.common.load import Load
-from ...utils.common.Section_Properties_Calculator import *
+from utils.common.material import *
+from Report_functions import *
+from utils.common.load import Load
+from utils.common.Section_Properties_Calculator import *
 
 import logging
-from ..member import Member
+from member import Member
 
 
 
@@ -774,7 +774,8 @@ class Tension_bolted(Member):
         else:
             return all_errors
 
-    def warn_text(self):
+    def 
+    (self):
 
         """
         Function to give logger warning when any old value is selected from Column and Beams table.
@@ -789,7 +790,7 @@ class Tension_bolted(Member):
             logger.info(
                 " : You are using a section (in red color) that is not available in latest version of IS 808")
 
-    def set_input_values(self, design_dictionary):
+    def set_input_values(design_dictionary):
 
         "initialisation of components required to design a tension member along with connection"
 
